@@ -1,0 +1,134 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  role         String   // ADMIN, FACULTY, STUDENT
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  facultyProfile Faculty?
+}
+
+model Faculty {
+  id             String   @id @default(uuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id])
+  name           String
+  maxWeeklyLoad  Int      @default(20)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  assignments    FacultySubjectSection[]
+  timetableEntries TimetableEntry[]
+}
+
+model Subject {
+  id             String   @id @default(uuid())
+  name           String
+  type           String   // Theory, Lab, Both
+  weeklyLectures Int      @default(0)
+  weeklyLabs     Int      @default(0)
+  labDuration    Int      @default(2) // Number of consecutive slots
+  isCore         Boolean  @default(false)
+  semester       Int
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  assignments    FacultySubjectSection[]
+  timetableEntries TimetableEntry[]
+}
+
+model Section {
+  id             String   @id @default(uuid())
+  name           String
+  semester       Int
+  strength       Int
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  assignments    FacultySubjectSection[]
+  timetableEntries TimetableEntry[]
+}
+
+model Room {
+  id             String   @id @default(uuid())
+  name           String
+  type           String   // Classroom, Lab
+  capacity       Int
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  timetableEntries TimetableEntry[]
+}
+
+model FacultySubjectSection {
+  id           String   @id @default(uuid())
+  facultyId    String
+  subjectId    String
+  sectionId    String
+  academicYear String
+  semester     Int
+  
+  faculty      Faculty  @relation(fields: [facultyId], references: [id])
+  subject      Subject  @relation(fields: [subjectId], references: [id])
+  section      Section  @relation(fields: [sectionId], references: [id])
+
+  @@unique([subjectId, sectionId, academicYear, semester])
+}
+
+model TimeSlot {
+  id           String   @id @default(uuid())
+  dayOfWeek    String   // Monday, Tuesday, etc.
+  startTime    String   // HH:mm
+  endTime      String   // HH:mm
+  isLunch      Boolean  @default(false)
+  slotIndex    Int
+
+  timetableEntries TimetableEntry[]
+}
+
+model TimetableVersion {
+  id           String   @id @default(uuid())
+  status       String   // DRAFT, PUBLISHED, ARCHIVED
+  generatedAt  DateTime @default(now())
+  publishedAt  DateTime?
+
+  entries      TimetableEntry[]
+}
+
+model TimetableEntry {
+  id                 String   @id @default(uuid())
+  timetableVersionId String
+  sectionId          String
+  subjectId          String
+  facultyId          String
+  roomId             String
+  timeSlotId         String
+  
+  version            TimetableVersion @relation(fields: [timetableVersionId], references: [id])
+  section            Section          @relation(fields: [sectionId], references: [id])
+  subject            Subject          @relation(fields: [subjectId], references: [id])
+  faculty            Faculty          @relation(fields: [facultyId], references: [id])
+  room               Room             @relation(fields: [roomId], references: [id])
+  timeSlot           TimeSlot         @relation(fields: [timeSlotId], references: [id])
+
+  // Unique constraints to prevent hard conflicts per version and slot
+  @@unique([timetableVersionId, facultyId, timeSlotId], name: "faculty_slot_conflict")
+  @@unique([timetableVersionId, sectionId, timeSlotId], name: "section_slot_conflict")
+  @@unique([timetableVersionId, roomId, timeSlotId], name: "room_slot_conflict")
+}

@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+
+# Compiled output — compiled JS/d.ts from src/ (NOT dist/)
+backend/src/**/*.js
+backend/src/**/*.d.ts
+backend/src/**/*.js.map
+backend/src/**/*.d.ts.map
+dist/
+
+# Environment / secrets
+.env
+*.env
+
+# SQLite database
+*.db
+*.db-journal
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE / Agent skill files
+.agents/
+.claude/
+.windsurf/
+skills-lock.json
+
+# Logs
+*.log
+npm-debug.log*
+
+# Prisma compiled config (not source)
+prisma.config.js
+prisma.config.d.ts
+prisma.config.js.map
+prisma.config.d.ts.map
