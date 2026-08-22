@@ -33,6 +33,7 @@ model Faculty {
 
   assignments    FacultySubjectSection[]
   timetableEntries TimetableEntry[]
+  preferences    FacultyPreference[]
 }
 
 model Subject {
@@ -100,15 +101,32 @@ model TimeSlot {
   slotIndex    Int
 
   timetableEntries TimetableEntry[]
+  preferences      FacultyPreference[]
 }
+
 
 model TimetableVersion {
   id           String   @id @default(uuid())
+  label        String?  // Optional user-provided name e.g. "Sem 1 – Draft A"
+  academicYear String?
+  semester     Int?
   status       String   // DRAFT, PUBLISHED, ARCHIVED
   generatedAt  DateTime @default(now())
   publishedAt  DateTime?
 
   entries      TimetableEntry[]
+}
+
+model FacultyPreference {
+  id               String    @id @default(uuid())
+  facultyId        String
+  timeSlotId       String
+  preferenceLevel  String    // PREFERRED, NEUTRAL, AVOID
+
+  faculty   Faculty   @relation(fields: [facultyId], references: [id], onDelete: Cascade)
+  timeSlot  TimeSlot  @relation(fields: [timeSlotId], references: [id], onDelete: Cascade)
+
+  @@unique([facultyId, timeSlotId])
 }
 
 model TimetableEntry {

@@ -9,6 +9,7 @@ import roomRoutes from './routes/roomRoutes';
 import timetableRoutes from './routes/timetableRoutes';
 import assignmentRoutes from './routes/assignmentRoutes';
 import timeSlotRoutes from './routes/timeSlotRoutes';
+import facultyPreferenceRoutes from './routes/facultyPreferenceRoutes';
 
 dotenv.config();
 
@@ -21,6 +22,7 @@ app.use(express.json());
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/faculty', facultyRoutes);
+app.use('/api/faculty', facultyPreferenceRoutes);
 app.use('/api/subjects', subjectRoutes);
 app.use('/api/sections', sectionRoutes);
 app.use('/api/rooms', roomRoutes);
