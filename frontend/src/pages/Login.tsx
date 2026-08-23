@@ -27,6 +27,8 @@ const Login: React.FC = () => {
       localStorage.setItem('role', user.role);
       localStorage.setItem('email', user.email);
       localStorage.setItem('userId', user.id);
+      if (user.sectionId) localStorage.setItem('sectionId', user.sectionId);
+      else localStorage.removeItem('sectionId');
 
       if (user.role === 'ADMIN') navigate('/admin');
       else if (user.role === 'FACULTY') navigate('/faculty');

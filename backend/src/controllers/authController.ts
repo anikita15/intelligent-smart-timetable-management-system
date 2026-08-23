@@ -25,7 +25,8 @@ export const login = async (req: Request, res: Response): Promise<any> => {
       { expiresIn: '24h' }
     );
 
-    res.json({ token, user: { id: user.id, email: user.email, role: user.role } });
+    res.json({ token, user: { id: user.id, email: user.email, role: user.role, sectionId: user.sectionId } });
+
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ error: 'Server error' });
@@ -58,7 +59,7 @@ export const setup = async (req: Request, res: Response): Promise<any> => {
 // Admin-only: create a FACULTY or STUDENT account
 export const register = async (req: Request, res: Response): Promise<any> => {
   try {
-    const { email, password, role, name, maxWeeklyLoad } = req.body;
+    const { email, password, role, name, maxWeeklyLoad, sectionId } = req.body;
 
     if (!email || !password || !role) {
       return res.status(400).json({ error: 'email, password, and role are required' });
@@ -74,7 +75,13 @@ export const register = async (req: Request, res: Response): Promise<any> => {
 
     const passwordHash = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({
-      data: { email, passwordHash, role },
+      data: {
+        email,
+        passwordHash,
+        role,
+        // Link student to section if provided
+        ...(role === 'STUDENT' && sectionId ? { sectionId } : {}),
+      },
     });
 
     // For FACULTY, create Faculty profile as well
@@ -91,9 +98,10 @@ export const register = async (req: Request, res: Response): Promise<any> => {
 
     res.status(201).json({
       message: 'User created successfully',
-      user: { id: user.id, email: user.email, role: user.role },
+      user: { id: user.id, email: user.email, role: user.role, sectionId: user.sectionId },
       faculty,
     });
+
   } catch (error) {
     console.error('Register error:', error);
     res.status(500).json({ error: 'Server error' });
@@ -109,6 +117,8 @@ export const listUsers = async (req: Request, res: Response): Promise<any> => {
         id: true,
         email: true,
         role: true,
+        sectionId: true,
+        section: { select: { id: true, name: true } },
         createdAt: true,
         facultyProfile: {
           select: { id: true, name: true, isActive: true, maxWeeklyLoad: true },
@@ -122,3 +132,22 @@ export const listUsers = async (req: Request, res: Response): Promise<any> => {
   }
 };
 
+// Admin-only: update a user's linked section (for students)
+export const updateUserSection = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const id = req.params.id as string;
+    const { sectionId } = req.body;
+    const user = await prisma.user.findUnique({ where: { id } });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (user.role !== 'STUDENT') return res.status(400).json({ error: 'Section can only be assigned to STUDENT accounts' });
+
+    const updated = await prisma.user.update({
+      where: { id },
+      data: { sectionId: sectionId || null },
+      select: { id: true, email: true, role: true, sectionId: true, section: { select: { id: true, name: true } } },
+    });
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update user section' });
+  }
+};
