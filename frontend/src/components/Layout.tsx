@@ -1,13 +1,11 @@
-import React from 'react';
-import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import {
-  CalendarDays, Users, BookOpen, MapPin, Grid, LogOut,
-  Layers, Clock, CalendarCheck, UserCog, LayoutDashboard
-} from 'lucide-react';
+import React, { useState } from 'react';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { LogOut, Menu, X } from 'lucide-react';
 
 const Layout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   const userRole = localStorage.getItem('role') || 'ADMIN';
   const email = localStorage.getItem('email') || userRole;
@@ -17,85 +15,97 @@ const Layout: React.FC = () => {
     navigate('/login');
   };
 
-  const isActive = (path: string) =>
-    path === '/admin'
-      ? location.pathname === '/admin'
-      : location.pathname.startsWith(path);
-
   const adminLinks = [
-    { section: 'Overview', links: [
-      { to: '/admin', icon: <LayoutDashboard size={17} />, label: 'Dashboard' },
-    ]},
-    { section: 'Data Management', links: [
-      { to: '/admin/faculty', icon: <Users size={17} />, label: 'Faculty' },
-      { to: '/admin/subjects', icon: <BookOpen size={17} />, label: 'Subjects' },
-      { to: '/admin/sections', icon: <Layers size={17} />, label: 'Sections' },
-      { to: '/admin/rooms', icon: <MapPin size={17} />, label: 'Rooms' },
-      { to: '/admin/assignments', icon: <Clock size={17} />, label: 'Assignments' },
-    ]},
-    { section: 'Timetable', links: [
-      { to: '/admin/timetable', icon: <CalendarCheck size={17} />, label: 'Timetable Manager' },
-    ]},
-    { section: 'System', links: [
-      { to: '/admin/users', icon: <UserCog size={17} />, label: 'Users' },
-    ]},
+    { to: '/admin', label: 'Dashboard', end: true },
+    { to: '/admin/faculty', label: 'Faculty' },
+    { to: '/admin/subjects', label: 'Subjects' },
+    { to: '/admin/sections', label: 'Sections' },
+    { to: '/admin/rooms', label: 'Rooms' },
+    { to: '/admin/assignments', label: 'Assignments' },
+    { to: '/admin/timetable', label: 'Timetable' },
+    { to: '/admin/users', label: 'Users' },
   ];
 
-  const facultyLinks = [
-    { section: null, links: [
-      { to: '/faculty', icon: <Grid size={17} />, label: 'My Schedule' },
-    ]},
-  ];
+  const facultyLinks = [{ to: '/faculty', label: 'My Schedule', end: true }];
+  const studentLinks = [{ to: '/student', label: 'My Timetable', end: true }];
 
-  const studentLinks = [
-    { section: null, links: [
-      { to: '/student', icon: <Grid size={17} />, label: 'My Timetable' },
-    ]},
-  ];
+  const navLinks = userRole === 'ADMIN' ? adminLinks : userRole === 'FACULTY' ? facultyLinks : studentLinks;
 
-  const linkGroups = userRole === 'ADMIN' ? adminLinks : userRole === 'FACULTY' ? facultyLinks : studentLinks;
+  const contextLabel = userRole === 'ADMIN' ? 'ADMIN PANEL' : userRole === 'FACULTY' ? 'FACULTY PORTAL' : 'STUDENT PORTAL';
+  const avatarInitials = userRole.slice(0, 2).toUpperCase();
+
+  const isDashboardOrConflicts = location.pathname === '/admin' || /\/admin\/timetable\/.+\/conflicts$/.test(location.pathname);
+
+  const goWithAction = (to: string, action: string) => {
+    setMobileNavOpen(false);
+    navigate(to, { state: { dockAction: action } });
+  };
+
+  const renderNav = (onNavigate?: () => void) => navLinks.map(link => (
+    <NavLink
+      key={link.to}
+      to={link.to}
+      end={link.end}
+      className="masthead-nav-link"
+      onClick={onNavigate}
+    >
+      {link.label}
+    </NavLink>
+  ));
 
   return (
     <div className="app-layout">
-      <aside className="sidebar">
-        <div className="sidebar-header">
-          <CalendarDays size={22} />
-          <span>ITMS</span>
-        </div>
+      <header className="masthead">
+        <div className="masthead-row1">
+          <div className="masthead-wordmark">ITMS</div>
+          <div className="masthead-context">{contextLabel}</div>
 
-        <nav className="sidebar-nav">
-          {linkGroups.map((group, gi) => (
-            <div key={gi}>
-              {group.section && <div className="sidebar-section-label">{group.section}</div>}
-              {group.links.map(link => (
-                <Link key={link.to} to={link.to} className={`sidebar-link ${isActive(link.to) ? 'active' : ''}`}>
-                  {link.icon}
-                  {link.label}
-                </Link>
-              ))}
-            </div>
-          ))}
-        </nav>
+          <nav className="masthead-nav" aria-label="Primary">
+            {renderNav()}
+          </nav>
 
-        <div className="sidebar-footer">
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.5rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{email}</div>
-          <button onClick={handleLogout} className="btn btn-outline w-full" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', justifyContent: 'center' }}>
-            <LogOut size={14} /> Logout
+          <button className="masthead-menu-btn" onClick={() => setMobileNavOpen(true)} aria-label="Open menu">
+            <Menu size={16} /> Menu
           </button>
+
+          <div className="masthead-divider" />
+          <div className="masthead-account" title={email}>
+            <div className="masthead-avatar">{avatarInitials}</div>
+            <div className="masthead-role">{userRole}</div>
+            <button className="masthead-logout" onClick={handleLogout} title="Log out">
+              <LogOut size={14} />
+            </button>
+          </div>
         </div>
-      </aside>
+
+        <div id="page-header-slot" />
+      </header>
+
+      {mobileNavOpen && (
+        <div className="mobile-nav-sheet">
+          <button className="mobile-nav-close" onClick={() => setMobileNavOpen(false)} aria-label="Close menu">
+            <X size={18} />
+          </button>
+          {renderNav(() => setMobileNavOpen(false))}
+        </div>
+      )}
 
       <main className="main-content">
-        <header className="topbar">
-          <div className="topbar-title">
-            {userRole === 'ADMIN' ? 'Admin Panel' : userRole === 'FACULTY' ? 'Faculty Portal' : 'Student Portal'}
-          </div>
-          <div className="topbar-user">{userRole}</div>
-        </header>
-        <div className="page-content">
+        <div className={`page-content ${isDashboardOrConflicts ? 'content-overlap' : ''}`}>
           <Outlet />
         </div>
       </main>
+
+      {userRole === 'ADMIN' && (
+        <div className="command-dock">
+          <button className="dock-item" onClick={() => goWithAction('/admin/subjects', 'openCreate')}>New subject</button>
+          <button className="dock-item" onClick={() => goWithAction('/admin/assignments', 'openCreate')}>New assignment</button>
+          <button className="dock-item disabled" title="Coming soon">Import CSV</button>
+          <div className="dock-divider" />
+          <button className="dock-primary" onClick={() => goWithAction('/admin/timetable', 'openGenerate')}>Generate timetable</button>
+          <div className="dock-hint">⌘K</div>
+        </div>
+      )}
     </div>
   );
 };

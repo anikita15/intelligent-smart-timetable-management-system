@@ -1,9 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Pencil, Trash2, Search } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { api } from '../../api';
 import Modal from '../../components/Modal';
 import ConfirmDialog from '../../components/ConfirmDialog';
+import PageHeader from '../../components/PageHeader';
+import StatusPill from '../../components/StatusPill';
+import { DataTable, DataTableRow } from '../../components/DataTable';
 import { useToast } from '../../components/Toast';
+
+const GRID = '1fr 1fr 1fr .8fr 90px';
 
 interface Room { id: string; name: string; type: string; capacity: number; isActive: boolean; }
 
@@ -45,43 +50,55 @@ const RoomManager: React.FC = () => {
   };
 
   const filtered = list.filter(r => r.name.toLowerCase().includes(search.toLowerCase()));
+  const totalCapacity = list.reduce((sum, r) => sum + (r.capacity || 0), 0);
+  const isBottleneck = list.length === 1;
 
   return (
     <div>
-      <div className="page-header">
-        <div><h1 className="page-title">Rooms</h1><p className="page-subtitle">Manage classrooms and labs</p></div>
-        <button className="btn btn-primary" onClick={openCreate}><Plus size={16} /> Add Room</button>
-      </div>
-      <div className="card">
-        <div className="p-4 filter-bar" style={{ borderBottom: '1px solid var(--border)' }}>
-          <div className="search-input-wrapper flex-1"><Search size={15} /><input className="form-input search-input" placeholder="Search rooms..." value={search} onChange={e => setSearch(e.target.value)} /></div>
-        </div>
-        <div className="table-wrapper">
-          {loading ? <div className="empty-state"><p>Loading...</p></div> : filtered.length === 0 ? (
-            <div className="empty-state"><h3>No rooms found</h3><p>Add rooms to enable scheduling.</p></div>
-          ) : (
-            <table className="data-table">
-              <thead><tr><th>Room Name</th><th>Type</th><th>Capacity</th><th>Status</th><th>Actions</th></tr></thead>
-              <tbody>
-                {filtered.map(r => (
-                  <tr key={r.id}>
-                    <td className="font-medium">{r.name}</td>
-                    <td><span className="badge" style={{ background: r.type === 'Lab' ? 'var(--info-light)' : 'var(--primary-light)', color: r.type === 'Lab' ? '#1d4ed8' : 'var(--primary)' }}>{r.type}</span></td>
-                    <td>{r.capacity}</td>
-                    <td><span className={`badge ${r.isActive ? 'badge-active' : 'badge-inactive'}`}>{r.isActive ? 'Active' : 'Inactive'}</span></td>
-                    <td><div className="actions">
-                      <button className="btn btn-ghost btn-sm btn-icon" onClick={() => openEdit(r)}><Pencil size={14} /></button>
-                      <button className="btn btn-ghost btn-sm btn-icon" onClick={() => setDeleteId(r.id)} style={{ color: 'var(--danger)' }}><Trash2 size={14} /></button>
-                    </div></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </div>
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editItem ? 'Edit Room' : 'Add Room'}
-        footer={<><button className="btn btn-outline" onClick={() => setModalOpen(false)}>Cancel</button><button className="btn btn-primary" onClick={handleSave} disabled={saving}>{saving ? 'Saving...' : editItem ? 'Save' : 'Create'}</button></>}>
+      <PageHeader
+        eyebrow="DATA · 04"
+        title="Rooms"
+        description="Classrooms and labs, with capacity."
+        count={list.length}
+        countLabel="RECORDS"
+        action={<button className="btn btn-primary" onClick={openCreate}><Plus size={16} /> Add room</button>}
+      />
+
+      <DataTable
+        searchValue={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search rooms"
+        columns={['ROOM', 'TYPE', 'CAPACITY', 'STATUS', 'ACTIONS']}
+        gridTemplate={GRID}
+        loading={loading}
+        empty={filtered.length === 0}
+        emptyTitle="No rooms found"
+        emptyDescription="Add rooms to enable scheduling."
+        emptyAction={<button className="btn btn-primary" onClick={openCreate}><Plus size={16} /> Add room</button>}
+        summary={`${list.length} RECORD${list.length === 1 ? '' : 'S'} · TOTAL CAPACITY ${totalCapacity} SEATS`}
+        advisory={isBottleneck && (
+          <div className="dt-advisory-row">
+            <div className="dt-advisory">One room for the current weekly load is the likely bottleneck if timetable generation fails for lack of room availability. Adding a second room resolves it.</div>
+            <button className="btn btn-primary" onClick={openCreate}>Add room</button>
+          </div>
+        )}
+      >
+        {filtered.map(r => (
+          <DataTableRow key={r.id} gridTemplate={GRID}>
+            <span className="dt-cell-name">{r.name}</span>
+            <StatusPill tone="crimson">{r.type.toUpperCase()}</StatusPill>
+            <span className="dt-cell-mono">{r.capacity}</span>
+            <StatusPill tone="neutral">{r.isActive ? 'ACTIVE' : 'INACTIVE'}</StatusPill>
+            <div className="dt-actions">
+              <span className="dt-edit" onClick={() => openEdit(r)}>Edit</span>
+              <span className="dt-delete" onClick={() => setDeleteId(r.id)}>Delete</span>
+            </div>
+          </DataTableRow>
+        ))}
+      </DataTable>
+
+      <Modal open={modalOpen} onClose={() => setModalOpen(false)} eyebrow="DATA · 04" title={editItem ? 'Edit Room' : 'Add Room'}
+        footer={<><button className="btn btn-outline" onClick={() => setModalOpen(false)}>Cancel</button><button className="btn btn-primary" onClick={handleSave} disabled={saving} style={saving ? { opacity: 0.6 } : undefined}>{saving ? (editItem ? 'Saving…' : 'Creating…') : editItem ? 'Save changes' : 'Create room'}</button></>}>
         <div className="form-group"><label className="form-label">Room Name <span className="required">*</span></label><input className="form-input" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} placeholder="e.g. Room 101" /></div>
         <div className="flex gap-4">
           <div className="form-group flex-1"><label className="form-label">Type</label><select className="form-select" value={form.type} onChange={e => setForm(p => ({ ...p, type: e.target.value }))}><option>Classroom</option><option>Lab</option></select></div>

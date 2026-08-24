@@ -1,8 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Search, UserCircle2 } from 'lucide-react';
+import { Plus, UserCircle2 } from 'lucide-react';
 import { api } from '../../api';
 import Modal from '../../components/Modal';
+import PageHeader from '../../components/PageHeader';
+import StatusPill from '../../components/StatusPill';
+import { DataTable, DataTableRow } from '../../components/DataTable';
 import { useToast } from '../../components/Toast';
+
+const GRID = '1.6fr .8fr .8fr .8fr 1fr';
 
 interface UserEntry {
   id: string;
@@ -40,45 +45,49 @@ const UserManager: React.FC = () => {
 
   const f = (field: keyof typeof form, val: any) => setForm(p => ({ ...p, [field]: val }));
   const filtered = list.filter(u => u.email.toLowerCase().includes(search.toLowerCase()) || u.facultyProfile?.name.toLowerCase().includes(search.toLowerCase()));
+  const studentLogins = list.filter(u => u.role === 'STUDENT').length;
 
   return (
     <div>
-      <div className="page-header">
-        <div><h1 className="page-title">Users</h1><p className="page-subtitle">Create and manage faculty & student accounts</p></div>
-        <button className="btn btn-primary" onClick={() => { setForm({ email: '', password: '', role: 'FACULTY', name: '', maxWeeklyLoad: 20 }); setModalOpen(true); }}><Plus size={16} /> Create Account</button>
-      </div>
+      <PageHeader
+        eyebrow="SYSTEM"
+        title="Users"
+        description="Faculty and student accounts, roles and access."
+        count={list.length}
+        countLabel="ACCOUNTS"
+        action={<button className="btn btn-primary" onClick={() => { setForm({ email: '', password: '', role: 'FACULTY', name: '', maxWeeklyLoad: 20 }); setModalOpen(true); }}><Plus size={16} /> Create account</button>}
+      />
 
-      <div className="card">
-        <div className="p-4 filter-bar" style={{ borderBottom: '1px solid var(--border)' }}>
-          <div className="search-input-wrapper flex-1"><Search size={15} /><input className="form-input search-input" placeholder="Search by email or name..." value={search} onChange={e => setSearch(e.target.value)} /></div>
-        </div>
-        <div className="table-wrapper">
-          {loading ? <div className="empty-state"><p>Loading...</p></div> : filtered.length === 0 ? (
-            <div className="empty-state"><UserCircle2 size={40} /><h3>No accounts yet</h3><p>Create faculty and student accounts.</p></div>
-          ) : (
-            <table className="data-table">
-              <thead><tr><th>Name / Email</th><th>Role</th><th>Max Load</th><th>Status</th><th>Created</th></tr></thead>
-              <tbody>
-                {filtered.map(u => (
-                  <tr key={u.id}>
-                    <td>
-                      <div className="font-medium">{u.facultyProfile?.name || '—'}</div>
-                      <div className="text-sm text-muted">{u.email}</div>
-                    </td>
-                    <td><span className={`badge ${u.role === 'FACULTY' ? 'badge-faculty' : 'badge-student'}`}>{u.role}</span></td>
-                    <td>{u.facultyProfile ? `${u.facultyProfile.maxWeeklyLoad} hrs` : '—'}</td>
-                    <td>{u.facultyProfile ? <span className={`badge ${u.facultyProfile.isActive ? 'badge-active' : 'badge-inactive'}`}>{u.facultyProfile.isActive ? 'Active' : 'Inactive'}</span> : <span className="badge badge-active">Active</span>}</td>
-                    <td className="text-sm text-muted">{new Date(u.createdAt).toLocaleDateString()}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </div>
+      <DataTable
+        searchValue={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search by email or name"
+        columns={['NAME / EMAIL', 'ROLE', 'MAX LOAD', 'STATUS', 'CREATED']}
+        gridTemplate={GRID}
+        rightAlignLast={false}
+        loading={loading}
+        empty={filtered.length === 0}
+        emptyTitle="No accounts yet"
+        emptyDescription="Create faculty and student accounts."
+        emptyAction={<button className="btn btn-primary" onClick={() => setModalOpen(true)}><UserCircle2 size={16} /> Create account</button>}
+        summary={`${list.length} ACCOUNT${list.length === 1 ? '' : 'S'} · ${studentLogins} STUDENT LOGIN${studentLogins === 1 ? '' : 'S'}`}
+      >
+        {filtered.map(u => (
+          <DataTableRow key={u.id} gridTemplate={GRID}>
+            <div className="dt-cell-stack">
+              <div className="dt-cell-name">{u.facultyProfile?.name || '—'}</div>
+              <div className="dt-cell-mono">{u.email}</div>
+            </div>
+            <StatusPill tone={u.role === 'FACULTY' ? 'crimson' : 'neutral'}>{u.role}</StatusPill>
+            <span className="dt-cell-mono">{u.facultyProfile ? `${u.facultyProfile.maxWeeklyLoad} hrs` : '—'}</span>
+            <StatusPill tone="neutral">{u.facultyProfile ? (u.facultyProfile.isActive ? 'ACTIVE' : 'INACTIVE') : 'ACTIVE'}</StatusPill>
+            <span className="dt-cell-mono">{new Date(u.createdAt).toLocaleDateString()}</span>
+          </DataTableRow>
+        ))}
+      </DataTable>
 
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Create Account"
-        footer={<><button className="btn btn-outline" onClick={() => setModalOpen(false)}>Cancel</button><button className="btn btn-primary" onClick={handleSave} disabled={saving}>{saving ? 'Creating...' : 'Create Account'}</button></>}>
+      <Modal open={modalOpen} onClose={() => setModalOpen(false)} eyebrow="SYSTEM" title="Create Account"
+        footer={<><button className="btn btn-outline" onClick={() => setModalOpen(false)}>Cancel</button><button className="btn btn-primary" onClick={handleSave} disabled={saving} style={saving ? { opacity: 0.6 } : undefined}>{saving ? 'Creating…' : 'Create account'}</button></>}>
         <div className="form-group"><label className="form-label">Role</label>
           <select className="form-select" value={form.role} onChange={e => f('role', e.target.value)}>
             <option value="FACULTY">Faculty</option><option value="STUDENT">Student</option>

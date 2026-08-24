@@ -1,9 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Pencil, Trash2, Search } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { Plus } from 'lucide-react';
 import { api } from '../../api';
 import Modal from '../../components/Modal';
 import ConfirmDialog from '../../components/ConfirmDialog';
+import PageHeader from '../../components/PageHeader';
+import StatusPill from '../../components/StatusPill';
+import { DataTable, DataTableRow } from '../../components/DataTable';
 import { useToast } from '../../components/Toast';
+
+const GRID = '1.2fr .8fr .8fr .8fr .8fr .6fr 90px';
 
 interface Subject { id: string; name: string; type: string; weeklyLectures: number; weeklyLabs: number; semester: number; isCore: boolean; }
 
@@ -11,6 +17,8 @@ const defaultForm = { name: '', type: 'Theory', weeklyLectures: 3, weeklyLabs: 0
 
 const SubjectManager: React.FC = () => {
   const { toast } = useToast();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [list, setList] = useState<Subject[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -29,6 +37,13 @@ const SubjectManager: React.FC = () => {
 
   const openCreate = () => { setEditItem(null); setForm(defaultForm); setModalOpen(true); };
   const openEdit = (s: Subject) => { setEditItem(s); setForm({ name: s.name, type: s.type, weeklyLectures: s.weeklyLectures, weeklyLabs: s.weeklyLabs, semester: s.semester, isCore: s.isCore }); setModalOpen(true); };
+
+  useEffect(() => {
+    if ((location.state as any)?.dockAction === 'openCreate') {
+      openCreate();
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state]);
 
   const handleSave = async () => {
     if (!form.name) return toast('warning', 'Name is required');
@@ -49,49 +64,50 @@ const SubjectManager: React.FC = () => {
 
   const f = (field: keyof typeof form, val: any) => setForm(p => ({ ...p, [field]: val }));
   const filtered = list.filter(s => s.name.toLowerCase().includes(search.toLowerCase()));
+  const totalSessions = list.reduce((sum, s) => sum + (s.weeklyLectures || 0) + (s.weeklyLabs || 0), 0);
 
   return (
     <div>
-      <div className="page-header">
-        <div><h1 className="page-title">Subjects</h1><p className="page-subtitle">Manage course subjects</p></div>
-        <button className="btn btn-primary" onClick={openCreate}><Plus size={16} /> Add Subject</button>
-      </div>
+      <PageHeader
+        eyebrow="DATA · 02"
+        title="Subjects"
+        description="Course codes, weekly lectures and labs, core flag."
+        count={list.length}
+        countLabel="RECORDS"
+        action={<button className="btn btn-primary" onClick={openCreate}><Plus size={16} /> Add subject</button>}
+      />
 
-      <div className="card">
-        <div className="p-4 filter-bar" style={{ borderBottom: '1px solid var(--border)' }}>
-          <div className="search-input-wrapper flex-1"><Search size={15} />
-            <input className="form-input search-input" placeholder="Search subjects..." value={search} onChange={e => setSearch(e.target.value)} />
-          </div>
-        </div>
-        <div className="table-wrapper">
-          {loading ? <div className="empty-state"><p>Loading...</p></div> : filtered.length === 0 ? (
-            <div className="empty-state"><h3>No subjects found</h3><p>Add subjects to continue.</p></div>
-          ) : (
-            <table className="data-table">
-              <thead><tr><th>Name</th><th>Type</th><th>Lectures/wk</th><th>Labs/wk</th><th>Semester</th><th>Core</th><th>Actions</th></tr></thead>
-              <tbody>
-                {filtered.map(s => (
-                  <tr key={s.id}>
-                    <td className="font-medium">{s.name}</td>
-                    <td><span className="badge" style={{ background: s.type === 'Lab' ? 'var(--info-light)' : s.type === 'Both' ? 'var(--warning-light)' : 'var(--primary-light)', color: s.type === 'Lab' ? '#1d4ed8' : s.type === 'Both' ? '#92400e' : 'var(--primary)' }}>{s.type}</span></td>
-                    <td>{s.weeklyLectures}</td>
-                    <td>{s.weeklyLabs}</td>
-                    <td>Sem {s.semester}</td>
-                    <td>{s.isCore ? '✅' : '—'}</td>
-                    <td><div className="actions">
-                      <button className="btn btn-ghost btn-sm btn-icon" onClick={() => openEdit(s)}><Pencil size={14} /></button>
-                      <button className="btn btn-ghost btn-sm btn-icon" onClick={() => setDeleteId(s.id)} style={{ color: 'var(--danger)' }}><Trash2 size={14} /></button>
-                    </div></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </div>
+      <DataTable
+        searchValue={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search subjects"
+        columns={['NAME', 'TYPE', 'LECTURES/WK', 'LABS/WK', 'SEMESTER', 'CORE', 'ACTIONS']}
+        gridTemplate={GRID}
+        loading={loading}
+        empty={filtered.length === 0}
+        emptyTitle="No subjects found"
+        emptyDescription="Add subjects to continue."
+        emptyAction={<button className="btn btn-primary" onClick={openCreate}><Plus size={16} /> Add subject</button>}
+        summary={`${list.length} RECORD${list.length === 1 ? '' : 'S'} · ${totalSessions} SESSIONS REQUIRED PER WEEK`}
+      >
+        {filtered.map(s => (
+          <DataTableRow key={s.id} gridTemplate={GRID}>
+            <span className="dt-cell-name">{s.name}</span>
+            <StatusPill tone="crimson">{s.type.toUpperCase()}</StatusPill>
+            <span className="dt-cell-mono">{s.weeklyLectures}</span>
+            <span className="dt-cell-mono" style={{ color: 'rgba(26,16,16,.4)' }}>{s.weeklyLabs}</span>
+            <span className="dt-cell-sub">Sem {s.semester}</span>
+            <span style={s.isCore ? { color: 'var(--crimson)', fontWeight: 500, fontSize: 12 } : { color: 'rgba(26,16,16,.35)' }}>{s.isCore ? 'Yes' : '—'}</span>
+            <div className="dt-actions">
+              <span className="dt-edit" onClick={() => openEdit(s)}>Edit</span>
+              <span className="dt-delete" onClick={() => setDeleteId(s.id)}>Delete</span>
+            </div>
+          </DataTableRow>
+        ))}
+      </DataTable>
 
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editItem ? 'Edit Subject' : 'Add Subject'}
-        footer={<><button className="btn btn-outline" onClick={() => setModalOpen(false)}>Cancel</button><button className="btn btn-primary" onClick={handleSave} disabled={saving}>{saving ? 'Saving...' : editItem ? 'Save' : 'Create'}</button></>}>
+      <Modal open={modalOpen} onClose={() => setModalOpen(false)} eyebrow="DATA · 02" title={editItem ? 'Edit Subject' : 'Add Subject'}
+        footer={<><button className="btn btn-outline" onClick={() => setModalOpen(false)}>Cancel</button><button className="btn btn-primary" onClick={handleSave} disabled={saving} style={saving ? { opacity: 0.6 } : undefined}>{saving ? (editItem ? 'Saving…' : 'Creating…') : editItem ? 'Save changes' : 'Create subject'}</button></>}>
         <div className="form-group"><label className="form-label">Name <span className="required">*</span></label><input className="form-input" value={form.name} onChange={e => f('name', e.target.value)} placeholder="e.g. Mathematics" /></div>
         <div className="flex gap-4">
           <div className="form-group flex-1"><label className="form-label">Type</label>
@@ -107,9 +123,10 @@ const SubjectManager: React.FC = () => {
           <div className="form-group flex-1"><label className="form-label">Weekly Lectures</label><input className="form-input" type="number" min={0} value={form.weeklyLectures} onChange={e => f('weeklyLectures', parseInt(e.target.value) || 0)} /></div>
           <div className="form-group flex-1"><label className="form-label">Weekly Labs</label><input className="form-input" type="number" min={0} value={form.weeklyLabs} onChange={e => f('weeklyLabs', parseInt(e.target.value) || 0)} /></div>
         </div>
-        <div className="flex items-center gap-2" style={{ marginTop: '0.5rem' }}>
-          <input type="checkbox" id="isCore" checked={form.isCore} onChange={e => f('isCore', e.target.checked)} style={{ accentColor: 'var(--primary)' }} />
-          <label htmlFor="isCore" style={{ fontSize: '0.875rem', fontWeight: 500 }}>Core subject</label>
+        <div className="check-strip">
+          <input type="checkbox" className="check-box" id="isCore" checked={form.isCore} onChange={e => f('isCore', e.target.checked)} />
+          <label htmlFor="isCore">Core subject</label>
+          <span className="check-helper">Cannot be dropped by a section</span>
         </div>
       </Modal>
 

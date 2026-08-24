@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { CalendarDays, Layers } from 'lucide-react';
 import { api } from '../api';
 import TimetableGrid from '../components/TimetableGrid';
+import PageHeader from '../components/PageHeader';
+import StatusPill from '../components/StatusPill';
 import { useToast } from '../components/Toast';
 
 const StudentDashboard: React.FC = () => {
@@ -30,8 +32,7 @@ const StudentDashboard: React.FC = () => {
 
   return (
     <div>
-      <h1 className="page-title">My Timetable</h1>
-      <p className="page-subtitle">Your section's weekly schedule</p>
+      <PageHeader eyebrow="STUDENT" title="My Timetable" description="Your section's weekly schedule." />
 
       {loading ? (
         <div className="empty-state card p-8"><p>Loading...</p></div>
@@ -54,7 +55,7 @@ const StudentDashboard: React.FC = () => {
                 {availableSections.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
               {selectedSection && (
-                <span className="badge badge-active">{availableSections.find((s: any) => s.id === selectedSection)?.name}</span>
+                <StatusPill tone="neutral">{availableSections.find((s: any) => s.id === selectedSection)?.name}</StatusPill>
               )}
             </div>
           </div>
@@ -69,7 +70,7 @@ const StudentDashboard: React.FC = () => {
             <div className="card p-4">
               <div className="flex items-center justify-between mb-4">
                 <h2 style={{ fontSize: '1rem', fontWeight: 600 }}>{publishedVersion.label || 'Published Timetable'}</h2>
-                <span className="badge badge-published">Published</span>
+                <StatusPill tone="crimson">PUBLISHED</StatusPill>
               </div>
               <TimetableGrid entries={entries} filterSectionId={selectedSection} />
             </div>

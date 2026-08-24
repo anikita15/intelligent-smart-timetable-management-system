@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Clock, CalendarDays } from 'lucide-react';
 import { api } from '../api';
 import TimetableGrid from '../components/TimetableGrid';
+import PageHeader from '../components/PageHeader';
+import StatusPill from '../components/StatusPill';
 import { useToast } from '../components/Toast';
 
 const FacultyDashboard: React.FC = () => {
@@ -43,8 +45,7 @@ const FacultyDashboard: React.FC = () => {
 
   return (
     <div>
-      <h1 className="page-title">My Schedule</h1>
-      <p className="page-subtitle">Your published weekly timetable</p>
+      <PageHeader eyebrow="FACULTY" title="My Schedule" description="Your published weekly timetable." />
 
       {loading ? (
         <div className="empty-state card p-8"><p>Loading your schedule...</p></div>
@@ -85,7 +86,7 @@ const FacultyDashboard: React.FC = () => {
           <div className="card p-4">
             <div className="flex items-center justify-between mb-4">
               <h2 style={{ fontSize: '1rem', fontWeight: 600 }}>{publishedVersion.label || 'Published Timetable'}</h2>
-              <span className="badge badge-published">Published</span>
+              <StatusPill tone="crimson">PUBLISHED</StatusPill>
             </div>
             <TimetableGrid entries={entries} filterFacultyId={myFaculty?.id} showSection />
           </div>

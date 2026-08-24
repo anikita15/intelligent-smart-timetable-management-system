@@ -39,11 +39,12 @@ const Login: React.FC = () => {
   return (
     <div className="login-page">
       <div className="login-card">
-        <div className="login-logo">
-          <CalendarDays size={40} />
+        <div className="login-logo flex items-center gap-2">
+          <CalendarDays size={28} />
+          <span className="font-serif" style={{ fontSize: 24 }}>ITMS</span>
         </div>
         <h1 className="login-title">Welcome back</h1>
-        <p className="login-subtitle">Sign in to Intelligent Timetable Management System</p>
+        <p className="login-subtitle">Sign in to the Intelligent Timetable Management System</p>
 
         {error && (
           <div className="alert-banner alert-danger mb-4">

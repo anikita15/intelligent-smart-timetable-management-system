@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Sparkles, CheckCircle, Archive, Trash2, Calendar, AlertTriangle, ChevronRight, Printer } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { api } from '../../api';
 import TimetableGrid from '../../components/TimetableGrid';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import Modal from '../../components/Modal';
+import PageHeader from '../../components/PageHeader';
+import StatusPill from '../../components/StatusPill';
 import { useToast } from '../../components/Toast';
 
 interface Version {
@@ -14,11 +16,13 @@ interface Version {
 }
 
 const StatusBadge = ({ status }: { status: string }) => (
-  <span className={`badge badge-${status.toLowerCase()}`}>{status}</span>
+  <StatusPill tone={status === 'PUBLISHED' ? 'crimson' : 'neutral'}>{status}</StatusPill>
 );
 
 const TimetableViewer: React.FC = () => {
   const { toast } = useToast();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [versions, setVersions] = useState<Version[]>([]);
   const [selected, setSelected] = useState<Version | null>(null);
   const [entries, setEntries] = useState<any[]>([]);
@@ -47,6 +51,13 @@ const TimetableViewer: React.FC = () => {
   }, []);
 
   useEffect(() => { loadVersions(); loadFilters(); }, []);
+
+  useEffect(() => {
+    if ((location.state as any)?.dockAction === 'openGenerate') {
+      setGenerateModal(true);
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state]);
 
   const selectVersion = async (v: Version) => {
     setSelected(v); setEntries([]); setConflicts(null); setFilterFaculty(''); setFilterSection('');
@@ -110,15 +121,17 @@ const TimetableViewer: React.FC = () => {
 
   return (
     <div>
-      <div className="page-header">
-        <div><h1 className="page-title">Timetable Manager</h1><p className="page-subtitle">Generate, view, and publish timetables</p></div>
-        <button className="btn btn-primary" onClick={() => setGenerateModal(true)}><Sparkles size={16} /> Generate Timetable</button>
-      </div>
+      <PageHeader
+        eyebrow="TIMETABLE"
+        title="Timetable Manager"
+        description="Generate, view, and publish timetables."
+        action={<button className="btn btn-primary" onClick={() => setGenerateModal(true)}><Sparkles size={16} /> Generate timetable</button>}
+      />
 
       <div className="flex gap-4" style={{ alignItems: 'flex-start' }}>
         {/* Version list */}
         <div className="card" style={{ width: '300px', flexShrink: 0 }}>
-          <div className="p-4" style={{ borderBottom: '1px solid var(--border)', fontWeight: 600, fontSize: '0.875rem' }}>Versions</div>
+          <div className="p-4 font-serif" style={{ borderBottom: '1px solid var(--hairline-soft)', fontSize: '19px' }}>Versions</div>
           <div style={{ padding: '0.5rem' }}>
             {versionsLoading ? <div className="p-4 text-muted text-sm">Loading...</div> : versions.length === 0 ? (
               <div className="p-4 text-muted text-sm text-center">No timetables yet. Generate one!</div>
@@ -202,8 +215,8 @@ const TimetableViewer: React.FC = () => {
       </div>
 
       {/* Generate modal */}
-      <Modal open={generateModal} onClose={() => setGenerateModal(false)} title="Generate New Timetable"
-        footer={<><button className="btn btn-outline" onClick={() => setGenerateModal(false)}>Cancel</button><button className="btn btn-primary" onClick={generate} disabled={generating}>{generating ? 'Generating...' : 'Generate'}</button></>}>
+      <Modal open={generateModal} onClose={() => setGenerateModal(false)} eyebrow="TIMETABLE" title="Generate New Timetable"
+        footer={<><button className="btn btn-outline" onClick={() => setGenerateModal(false)}>Cancel</button><button className="btn btn-primary" onClick={generate} disabled={generating} style={generating ? { opacity: 0.6 } : undefined}>{generating ? 'Generating…' : 'Generate timetable'}</button></>}>
         <div className="form-group"><label className="form-label">Version Label</label><input className="form-input" value={genForm.label} onChange={e => setGenForm(p => ({ ...p, label: e.target.value }))} placeholder="e.g. Sem 1 – Main Draft" /></div>
         <div className="flex gap-4">
           <div className="form-group flex-1"><label className="form-label">Academic Year <span className="required">*</span></label><input className="form-input" value={genForm.academicYear} onChange={e => setGenForm(p => ({ ...p, academicYear: e.target.value }))} placeholder="2024-2025" /></div>

@@ -1,9 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Pencil, Trash2, Search } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { api } from '../../api';
 import Modal from '../../components/Modal';
 import ConfirmDialog from '../../components/ConfirmDialog';
+import PageHeader from '../../components/PageHeader';
+import StatusPill from '../../components/StatusPill';
+import { DataTable, DataTableRow } from '../../components/DataTable';
 import { useToast } from '../../components/Toast';
+
+const GRID = '1fr 1fr 1fr .8fr 90px';
 
 interface Section { id: string; name: string; semester: number; strength: number; isActive: boolean; }
 
@@ -45,43 +50,48 @@ const SectionManager: React.FC = () => {
   };
 
   const filtered = list.filter(s => s.name.toLowerCase().includes(search.toLowerCase()));
+  const totalSeats = list.reduce((sum, s) => sum + (s.strength || 0), 0);
 
   return (
     <div>
-      <div className="page-header">
-        <div><h1 className="page-title">Sections</h1><p className="page-subtitle">Manage student sections</p></div>
-        <button className="btn btn-primary" onClick={openCreate}><Plus size={16} /> Add Section</button>
-      </div>
-      <div className="card">
-        <div className="p-4 filter-bar" style={{ borderBottom: '1px solid var(--border)' }}>
-          <div className="search-input-wrapper flex-1"><Search size={15} /><input className="form-input search-input" placeholder="Search sections..." value={search} onChange={e => setSearch(e.target.value)} /></div>
-        </div>
-        <div className="table-wrapper">
-          {loading ? <div className="empty-state"><p>Loading...</p></div> : filtered.length === 0 ? (
-            <div className="empty-state"><h3>No sections found</h3><p>Add sections to continue.</p></div>
-          ) : (
-            <table className="data-table">
-              <thead><tr><th>Name</th><th>Semester</th><th>Strength</th><th>Status</th><th>Actions</th></tr></thead>
-              <tbody>
-                {filtered.map(s => (
-                  <tr key={s.id}>
-                    <td className="font-medium">{s.name}</td>
-                    <td>Sem {s.semester}</td>
-                    <td>{s.strength} students</td>
-                    <td><span className={`badge ${s.isActive ? 'badge-active' : 'badge-inactive'}`}>{s.isActive ? 'Active' : 'Inactive'}</span></td>
-                    <td><div className="actions">
-                      <button className="btn btn-ghost btn-sm btn-icon" onClick={() => openEdit(s)}><Pencil size={14} /></button>
-                      <button className="btn btn-ghost btn-sm btn-icon" onClick={() => setDeleteId(s.id)} style={{ color: 'var(--danger)' }}><Trash2 size={14} /></button>
-                    </div></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </div>
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editItem ? 'Edit Section' : 'Add Section'}
-        footer={<><button className="btn btn-outline" onClick={() => setModalOpen(false)}>Cancel</button><button className="btn btn-primary" onClick={handleSave} disabled={saving}>{saving ? 'Saving...' : editItem ? 'Save' : 'Create'}</button></>}>
+      <PageHeader
+        eyebrow="DATA · 03"
+        title="Sections"
+        description="Student groups by semester and strength."
+        count={list.length}
+        countLabel="RECORDS"
+        action={<button className="btn btn-primary" onClick={openCreate}><Plus size={16} /> Add section</button>}
+      />
+
+      <DataTable
+        searchValue={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search sections"
+        columns={['NAME', 'SEMESTER', 'STRENGTH', 'STATUS', 'ACTIONS']}
+        gridTemplate={GRID}
+        loading={loading}
+        empty={filtered.length === 0}
+        emptyTitle="No sections found"
+        emptyDescription="Add sections to continue."
+        emptyAction={<button className="btn btn-primary" onClick={openCreate}><Plus size={16} /> Add section</button>}
+        summary={`${list.length} RECORD${list.length === 1 ? '' : 'S'} · ${totalSeats} SEATS TO PLACE`}
+      >
+        {filtered.map(s => (
+          <DataTableRow key={s.id} gridTemplate={GRID}>
+            <span className="dt-cell-name">{s.name}</span>
+            <span className="dt-cell-sub">Sem {s.semester}</span>
+            <span className="dt-cell-sub">{s.strength} students</span>
+            <StatusPill tone="neutral">{s.isActive ? 'ACTIVE' : 'INACTIVE'}</StatusPill>
+            <div className="dt-actions">
+              <span className="dt-edit" onClick={() => openEdit(s)}>Edit</span>
+              <span className="dt-delete" onClick={() => setDeleteId(s.id)}>Delete</span>
+            </div>
+          </DataTableRow>
+        ))}
+      </DataTable>
+
+      <Modal open={modalOpen} onClose={() => setModalOpen(false)} eyebrow="DATA · 03" title={editItem ? 'Edit Section' : 'Add Section'}
+        footer={<><button className="btn btn-outline" onClick={() => setModalOpen(false)}>Cancel</button><button className="btn btn-primary" onClick={handleSave} disabled={saving} style={saving ? { opacity: 0.6 } : undefined}>{saving ? (editItem ? 'Saving…' : 'Creating…') : editItem ? 'Save changes' : 'Create section'}</button></>}>
         <div className="form-group"><label className="form-label">Section Name <span className="required">*</span></label><input className="form-input" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} placeholder="e.g. CS-A" /></div>
         <div className="flex gap-4">
           <div className="form-group flex-1"><label className="form-label">Semester</label><input className="form-input" type="number" min={1} max={8} value={form.semester} onChange={e => setForm(p => ({ ...p, semester: parseInt(e.target.value) || 1 }))} /></div>
