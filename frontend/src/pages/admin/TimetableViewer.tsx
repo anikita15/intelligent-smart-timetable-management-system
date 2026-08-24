@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Sparkles, CheckCircle, Archive, Trash2, Calendar, AlertTriangle, ChevronRight, Printer } from 'lucide-react';
+import { Sparkles, CheckCircle, Archive, Trash2, Calendar, AlertTriangle, ChevronRight, FileDown, Sheet } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { api } from '../../api';
 import TimetableGrid from '../../components/TimetableGrid';
@@ -8,6 +8,9 @@ import Modal from '../../components/Modal';
 import PageHeader from '../../components/PageHeader';
 import StatusPill from '../../components/StatusPill';
 import { useToast } from '../../components/Toast';
+import { exportTimetablePdf } from '../../utils/exportPdf';
+import { exportTimetableExcel } from '../../utils/exportExcel';
+
 
 interface Version {
   id: string; label: string | null; status: string;
@@ -38,6 +41,7 @@ const TimetableViewer: React.FC = () => {
   const [generateModal, setGenerateModal] = useState(false);
   const [genForm, setGenForm] = useState({ academicYear: new Date().getFullYear() + '-' + (new Date().getFullYear() + 1), semester: 1, label: '' });
   const [generating, setGenerating] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
 
   const loadVersions = useCallback(async () => {
     setVersionsLoading(true);
@@ -98,6 +102,29 @@ const TimetableViewer: React.FC = () => {
     } catch (e: any) { toast('error', e.message); } finally { setGenerating(false); }
   };
 
+  const handleExportPdf = async () => {
+    if (!entries.length || !selected) return;
+    setExportingPdf(true);
+    try {
+      await exportTimetablePdf(
+        'timetable-export-area',
+        selected.label || 'timetable',
+        selected.label || 'Timetable'
+      );
+      toast('success', 'PDF downloaded!');
+    } catch {
+      toast('error', 'PDF export failed');
+    } finally {
+      setExportingPdf(false);
+    }
+  };
+
+  const handleExportExcel = () => {
+    if (!entries.length || !selected) return;
+    exportTimetableExcel(entries, selected.label || 'timetable');
+    toast('success', 'Excel file downloaded!');
+  };
+
   const exportIcal = () => {
     if (!entries.length) return;
     const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//ITMS//EN'];
@@ -116,8 +143,6 @@ const TimetableViewer: React.FC = () => {
     a.download = `${selected?.label || 'timetable'}.ics`; a.click();
     toast('success', 'iCal file downloaded');
   };
-
-  const exportPdf = () => { window.print(); };
 
   return (
     <div>
@@ -179,7 +204,8 @@ const TimetableViewer: React.FC = () => {
                   </div>
                   <div className="flex gap-2 flex-wrap">
                     <button className="btn btn-outline btn-sm" onClick={exportIcal}><Calendar size={14} /> iCal</button>
-                    <button className="btn btn-outline btn-sm" onClick={exportPdf}><Printer size={14} /> Print PDF</button>
+                    <button className="btn btn-outline btn-sm" onClick={handleExportExcel}><Sheet size={14} /> Excel</button>
+                    <button className="btn btn-outline btn-sm" onClick={handleExportPdf} disabled={exportingPdf}><FileDown size={14} /> {exportingPdf ? 'Exporting...' : 'PDF'}</button>
                     {selected.status === 'DRAFT' && <>
                       <button className="btn btn-success btn-sm" onClick={() => setConfirmAction('publish')}><CheckCircle size={14} /> Publish</button>
                       <button className="btn btn-outline btn-sm" onClick={() => setConfirmAction('delete')} style={{ color: 'var(--danger)' }}><Trash2 size={14} /> Delete</button>
@@ -205,7 +231,7 @@ const TimetableViewer: React.FC = () => {
               {loading ? (
                 <div className="card empty-state p-8"><p>Loading timetable...</p></div>
               ) : (
-                <div className="card p-4">
+                <div id="timetable-export-area" className="card p-4">
                   <TimetableGrid entries={entries} filterFacultyId={filterFaculty || undefined} filterSectionId={filterSection || undefined} showSection={!filterSection} />
                 </div>
               )}

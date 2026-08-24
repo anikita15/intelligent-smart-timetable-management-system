@@ -6,8 +6,8 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model User {
@@ -15,10 +15,12 @@ model User {
   email        String   @unique
   passwordHash String
   role         String   // ADMIN, FACULTY, STUDENT
+  sectionId    String?  // For STUDENT role: linked section
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   facultyProfile Faculty?
+  section        Section? @relation(fields: [sectionId], references: [id])
 }
 
 model Faculty {
@@ -61,8 +63,9 @@ model Section {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  assignments    FacultySubjectSection[]
+  assignments      FacultySubjectSection[]
   timetableEntries TimetableEntry[]
+  users            User[]
 }
 
 model Room {

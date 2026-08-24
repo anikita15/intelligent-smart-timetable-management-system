@@ -1,0 +1,18 @@
+{
+  "testEnvironment": "node",
+  "roots": ["<rootDir>/src", "<rootDir>/tests"],
+  "testMatch": ["**/*.test.ts"],
+  "moduleFileExtensions": ["ts", "js", "json"],
+  "transform": {
+    "^.+\\.ts$": [
+      "@swc/jest",
+      {
+        "jsc": {
+          "parser": { "syntax": "typescript" },
+          "target": "es2020"
+        },
+        "module": { "type": "commonjs" }
+      }
+    ]
+  }
+}
