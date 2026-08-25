@@ -320,3 +320,115 @@ export const getConflicts = async (req: Request, res: Response): Promise<any> =>
     res.status(500).json({ error: 'Failed to fetch conflicts' });
   }
 };
+
+export const checkSlot = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { versionId } = req.params;
+    const { facultyId, roomId, sectionId, timeSlotId, ignoreEntryId } = req.body;
+
+    const version = await prisma.timetableVersion.findUnique({ where: { id: versionId } });
+    if (!version) return res.status(404).json({ error: 'Version not found' });
+
+    // Build conditions to find overlapping entries
+    const OR_conditions: any[] = [];
+    if (facultyId) OR_conditions.push({ facultyId, timeSlotId });
+    if (roomId) OR_conditions.push({ roomId, timeSlotId });
+    if (sectionId) OR_conditions.push({ sectionId, timeSlotId });
+
+    if (OR_conditions.length === 0) {
+      return res.json({ hasConflict: false, conflicts: [] });
+    }
+
+    const overlapping = await prisma.timetableEntry.findMany({
+      where: {
+        timetableVersionId: versionId,
+        id: ignoreEntryId ? { not: ignoreEntryId } : undefined,
+        OR: OR_conditions,
+      },
+      include: {
+        faculty: true,
+        room: true,
+        section: true,
+        timeSlot: true,
+      },
+    });
+
+    const conflicts = overlapping.map(entry => {
+      if (entry.facultyId === facultyId) return `Faculty ${entry.faculty.name} is already teaching section ${entry.section.name} in this slot.`;
+      if (entry.roomId === roomId) return `Room ${entry.room.name} is already occupied by section ${entry.section.name}.`;
+      if (entry.sectionId === sectionId) return `Section ${entry.section.name} already has a class in this slot.`;
+      return 'Unknown conflict';
+    });
+
+    res.json({
+      hasConflict: conflicts.length > 0,
+      conflicts,
+    });
+  } catch (error) {
+    console.error('Check slot error:', error);
+    res.status(500).json({ error: 'Failed to check slot' });
+  }
+};
+
+export const updateEntry = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { versionId, entryId } = req.params;
+    const { facultyId, roomId, timeSlotId, force } = req.body;
+
+    const version = await prisma.timetableVersion.findUnique({ where: { id: versionId } });
+    if (!version) return res.status(404).json({ error: 'Version not found' });
+    if (version.status !== 'DRAFT') {
+      return res.status(400).json({ error: 'Only DRAFT timetables can be edited manually.' });
+    }
+
+    const entry = await prisma.timetableEntry.findUnique({ where: { id: entryId } });
+    if (!entry || entry.timetableVersionId !== versionId) {
+      return res.status(404).json({ error: 'Entry not found' });
+    }
+
+    if (!force) {
+      // Check for conflicts
+      const OR_conditions: any[] = [];
+      const testFaculty = facultyId || entry.facultyId;
+      const testRoom = roomId || entry.roomId;
+      const testSlot = timeSlotId || entry.timeSlotId;
+      
+      if (testFaculty) OR_conditions.push({ facultyId: testFaculty, timeSlotId: testSlot });
+      if (testRoom) OR_conditions.push({ roomId: testRoom, timeSlotId: testSlot });
+      if (entry.sectionId) OR_conditions.push({ sectionId: entry.sectionId, timeSlotId: testSlot });
+
+      const overlapping = await prisma.timetableEntry.findFirst({
+        where: {
+          timetableVersionId: versionId,
+          id: { not: entryId },
+          OR: OR_conditions,
+        },
+      });
+
+      if (overlapping) {
+        return res.status(409).json({ error: 'Conflict detected. Use force=true to override.', conflictEntryId: overlapping.id });
+      }
+    }
+
+    const updated = await prisma.timetableEntry.update({
+      where: { id: entryId },
+      data: {
+        facultyId: facultyId || undefined,
+        roomId: roomId || undefined,
+        timeSlotId: timeSlotId || undefined,
+      },
+      include: {
+        faculty: true,
+        room: true,
+        timeSlot: true,
+        subject: true,
+        section: true,
+      }
+    });
+
+    res.json({ message: 'Entry updated successfully', entry: updated });
+  } catch (error) {
+    console.error('Update entry error:', error);
+    res.status(500).json({ error: 'Failed to update entry' });
+  }
+};

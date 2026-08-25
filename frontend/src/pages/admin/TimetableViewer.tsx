@@ -10,7 +10,7 @@ import StatusPill from '../../components/StatusPill';
 import { useToast } from '../../components/Toast';
 import { exportTimetablePdf } from '../../utils/exportPdf';
 import { exportTimetableExcel } from '../../utils/exportExcel';
-
+import EntryEditPanel from '../../components/EntryEditPanel';
 
 interface Version {
   id: string; label: string | null; status: string;
@@ -42,6 +42,7 @@ const TimetableViewer: React.FC = () => {
   const [genForm, setGenForm] = useState({ academicYear: new Date().getFullYear() + '-' + (new Date().getFullYear() + 1), semester: 1, label: '' });
   const [generating, setGenerating] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
+  const [editingEntry, setEditingEntry] = useState<any>(null);
 
   const loadVersions = useCallback(async () => {
     setVersionsLoading(true);
@@ -232,7 +233,13 @@ const TimetableViewer: React.FC = () => {
                 <div className="card empty-state p-8"><p>Loading timetable...</p></div>
               ) : (
                 <div id="timetable-export-area" className="card p-4">
-                  <TimetableGrid entries={entries} filterFacultyId={filterFaculty || undefined} filterSectionId={filterSection || undefined} showSection={!filterSection} />
+                  <TimetableGrid 
+                    entries={entries} 
+                    filterFacultyId={filterFaculty || undefined} 
+                    filterSectionId={filterSection || undefined} 
+                    showSection={!filterSection} 
+                    onEntryClick={selected.status === 'DRAFT' ? (entry) => setEditingEntry(entry) : undefined}
+                  />
                 </div>
               )}
             </div>
@@ -263,6 +270,18 @@ const TimetableViewer: React.FC = () => {
         message={confirmAction === 'publish' ? 'Publish this timetable? It will become visible to faculty and students.' : confirmAction === 'archive' ? 'Archive this timetable? It will no longer be the active schedule.' : 'Permanently delete this draft version? This cannot be undone.'}
         confirmLabel={confirmAction === 'publish' ? 'Publish' : confirmAction === 'archive' ? 'Archive' : 'Delete'}
         danger={confirmAction === 'delete'}
+      />
+
+      <EntryEditPanel
+        open={!!editingEntry}
+        onClose={() => setEditingEntry(null)}
+        entry={editingEntry}
+        versionId={selected?.id || ''}
+        onSave={() => {
+          if (selected) {
+            selectVersion(selected);
+          }
+        }}
       />
     </div>
   );

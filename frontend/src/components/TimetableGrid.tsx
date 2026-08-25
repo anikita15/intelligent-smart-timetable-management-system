@@ -23,6 +23,7 @@ interface Props {
   filterFacultyId?: string;
   filterSectionId?: string;
   showSection?: boolean;
+  onEntryClick?: (entry: Entry) => void;
 }
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
@@ -34,7 +35,7 @@ function sectionColorIdx(sectionId: string) {
   return Math.abs(hash) % 6;
 }
 
-const TimetableGrid: React.FC<Props> = ({ entries, filterFacultyId, filterSectionId, showSection = false }) => {
+const TimetableGrid: React.FC<Props> = ({ entries, filterFacultyId, filterSectionId, showSection = false, onEntryClick }) => {
   const filtered = useMemo(() => {
     let e = entries;
     if (filterFacultyId) e = e.filter(x => x.faculty.id === filterFacultyId);
@@ -103,7 +104,12 @@ const TimetableGrid: React.FC<Props> = ({ entries, filterFacultyId, filterSectio
                 <div key={day} className={`timetable-slot ${isLunch ? 'lunch' : ''} ${cellEntries.length === 0 ? 'empty' : ''}`}>
                   {isLunch && cellEntries.length === 0 && <div className="lunch-banner">Lunch</div>}
                   {cellEntries.map(entry => (
-                    <div key={entry.id} className={`timetable-entry entry-color-${sectionColorIdx(entry.section.id)}`}>
+                    <div 
+                      key={entry.id} 
+                      className={`timetable-entry entry-color-${sectionColorIdx(entry.section.id)} ${onEntryClick ? 'clickable' : ''}`}
+                      onClick={() => onEntryClick && onEntryClick(entry)}
+                      style={onEntryClick ? { cursor: 'pointer' } : undefined}
+                    >
                       {showSection && <span className="section-name">{entry.section.name}</span>}
                       <span className="subject-name">{entry.subject.name}</span>
                       <span className="faculty-name">{entry.faculty.name}</span>
