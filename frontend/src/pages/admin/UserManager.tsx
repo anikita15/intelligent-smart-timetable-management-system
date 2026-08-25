@@ -1,8 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Search, UserCircle2, Link2 } from 'lucide-react';
+import { Plus, UserCircle2 } from 'lucide-react';
 import { api } from '../../api';
 import Modal from '../../components/Modal';
+import PageHeader from '../../components/PageHeader';
+import StatusPill from '../../components/StatusPill';
+import { DataTable, DataTableRow } from '../../components/DataTable';
 import { useToast } from '../../components/Toast';
+
+const GRID = '1.6fr .8fr 1fr .8fr .9fr 90px';
 
 interface UserEntry {
   id: string;
@@ -63,67 +68,59 @@ const UserManager: React.FC = () => {
     u.email.toLowerCase().includes(search.toLowerCase()) ||
     (u.facultyProfile?.name || '').toLowerCase().includes(search.toLowerCase())
   );
+  const studentLogins = list.filter(u => u.role === 'STUDENT').length;
 
   return (
     <div>
-      <div className="page-header">
-        <div><h1 className="page-title">Users</h1><p className="page-subtitle">Create and manage faculty & student accounts</p></div>
-        <button className="btn btn-primary" onClick={() => { setForm({ email: '', password: '', role: 'FACULTY', name: '', maxWeeklyLoad: 20, sectionId: '' }); setModalOpen(true); }}><Plus size={16} /> Create Account</button>
-      </div>
+      <PageHeader
+        eyebrow="SYSTEM"
+        title="Users"
+        description="Faculty and student accounts, roles and access."
+        count={list.length}
+        countLabel="ACCOUNTS"
+        action={<button className="btn btn-primary" onClick={() => { setForm({ email: '', password: '', role: 'FACULTY', name: '', maxWeeklyLoad: 20, sectionId: '' }); setModalOpen(true); }}><Plus size={16} /> Create account</button>}
+      />
 
-      <div className="card">
-        <div className="p-4 filter-bar" style={{ borderBottom: '1px solid var(--border)' }}>
-          <div className="search-input-wrapper flex-1"><Search size={15} /><input className="form-input search-input" placeholder="Search by email or name..." value={search} onChange={e => setSearch(e.target.value)} /></div>
-        </div>
-        <div className="table-wrapper">
-          {loading ? <div className="empty-state"><p>Loading...</p></div> : filtered.length === 0 ? (
-            <div className="empty-state"><UserCircle2 size={40} /><h3>No accounts yet</h3><p>Create faculty and student accounts.</p></div>
-          ) : (
-            <table className="data-table">
-              <thead><tr><th>Name / Email</th><th>Role</th><th>Section / Load</th><th>Status</th><th>Created</th><th>Actions</th></tr></thead>
-              <tbody>
-                {filtered.map(u => (
-                  <tr key={u.id}>
-                    <td>
-                      <div className="font-medium">{u.facultyProfile?.name || u.email.split('@')[0]}</div>
-                      <div className="text-sm text-muted">{u.email}</div>
-                    </td>
-                    <td><span className={`badge ${u.role === 'FACULTY' ? 'badge-faculty' : 'badge-student'}`}>{u.role}</span></td>
-                    <td>
-                      {u.role === 'STUDENT' ? (
-                        u.section ? (
-                          <span className="badge badge-active" style={{ fontSize: '0.7rem' }}>{u.section.name}</span>
-                        ) : (
-                          <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>No section</span>
-                        )
-                      ) : (
-                        u.facultyProfile ? `${u.facultyProfile.maxWeeklyLoad} hrs` : '—'
-                      )}
-                    </td>
-                    <td>{u.facultyProfile ? <span className={`badge ${u.facultyProfile.isActive ? 'badge-active' : 'badge-inactive'}`}>{u.facultyProfile.isActive ? 'Active' : 'Inactive'}</span> : <span className="badge badge-active">Active</span>}</td>
-                    <td className="text-sm text-muted">{new Date(u.createdAt).toLocaleDateString()}</td>
-                    <td>
-                      {u.role === 'STUDENT' && (
-                        <button
-                          className="btn btn-ghost btn-sm"
-                          title="Assign section"
-                          onClick={() => { setSectionModalUser(u); setLinkSectionId(u.sectionId || ''); }}
-                        >
-                          <Link2 size={14} /> {u.sectionId ? 'Change' : 'Link'} Section
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </div>
+      <DataTable
+        searchValue={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search by email or name"
+        columns={['NAME / EMAIL', 'ROLE', 'SECTION / LOAD', 'STATUS', 'CREATED', 'ACTIONS']}
+        gridTemplate={GRID}
+        loading={loading}
+        empty={filtered.length === 0}
+        emptyTitle="No accounts yet"
+        emptyDescription="Create faculty and student accounts."
+        emptyAction={<button className="btn btn-primary" onClick={() => setModalOpen(true)}><UserCircle2 size={16} /> Create account</button>}
+        summary={`${list.length} ACCOUNT${list.length === 1 ? '' : 'S'} · ${studentLogins} STUDENT LOGIN${studentLogins === 1 ? '' : 'S'}`}
+      >
+        {filtered.map(u => (
+          <DataTableRow key={u.id} gridTemplate={GRID}>
+            <div className="dt-cell-stack">
+              <div className="dt-cell-name">{u.facultyProfile?.name || u.email.split('@')[0]}</div>
+              <div className="dt-cell-mono">{u.email}</div>
+            </div>
+            <StatusPill tone={u.role === 'FACULTY' ? 'crimson' : 'neutral'}>{u.role}</StatusPill>
+            {u.role === 'STUDENT' ? (
+              u.section ? <StatusPill tone="neutral">{u.section.name}</StatusPill> : <span style={{ color: 'rgba(26,16,16,.4)', fontSize: 12 }}>No section</span>
+            ) : (
+              <span className="dt-cell-mono">{u.facultyProfile ? `${u.facultyProfile.maxWeeklyLoad} hrs` : '—'}</span>
+            )}
+            <StatusPill tone="neutral">{u.facultyProfile ? (u.facultyProfile.isActive ? 'ACTIVE' : 'INACTIVE') : 'ACTIVE'}</StatusPill>
+            <span className="dt-cell-mono">{new Date(u.createdAt).toLocaleDateString()}</span>
+            <div className="dt-actions">
+              {u.role === 'STUDENT' && (
+                <span className="dt-edit" onClick={() => { setSectionModalUser(u); setLinkSectionId(u.sectionId || ''); }}>
+                  {u.sectionId ? 'Change' : 'Link'}
+                </span>
+              )}
+            </div>
+          </DataTableRow>
+        ))}
+      </DataTable>
 
-      {/* Create Account Modal */}
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Create Account"
-        footer={<><button className="btn btn-outline" onClick={() => setModalOpen(false)}>Cancel</button><button className="btn btn-primary" onClick={handleSave} disabled={saving}>{saving ? 'Creating...' : 'Create Account'}</button></>}>
+      <Modal open={modalOpen} onClose={() => setModalOpen(false)} eyebrow="SYSTEM" title="Create Account"
+        footer={<><button className="btn btn-outline" onClick={() => setModalOpen(false)}>Cancel</button><button className="btn btn-primary" onClick={handleSave} disabled={saving} style={saving ? { opacity: 0.6 } : undefined}>{saving ? 'Creating…' : 'Create account'}</button></>}>
         <div className="form-group"><label className="form-label">Role</label>
           <select className="form-select" value={form.role} onChange={e => f('role', e.target.value)}>
             <option value="FACULTY">Faculty</option><option value="STUDENT">Student</option>
@@ -155,16 +152,15 @@ const UserManager: React.FC = () => {
         )}
       </Modal>
 
-      {/* Link Section Modal */}
-      <Modal open={!!sectionModalUser} onClose={() => setSectionModalUser(null)} title={`Link Section — ${sectionModalUser?.email}`}
-        footer={<><button className="btn btn-outline" onClick={() => setSectionModalUser(null)}>Cancel</button><button className="btn btn-primary" onClick={handleLinkSection} disabled={saving}>{saving ? 'Saving...' : 'Save'}</button></>}>
+      <Modal open={!!sectionModalUser} onClose={() => setSectionModalUser(null)} eyebrow="SYSTEM" title={`Link Section — ${sectionModalUser?.email}`}
+        footer={<><button className="btn btn-outline" onClick={() => setSectionModalUser(null)}>Cancel</button><button className="btn btn-primary" onClick={handleLinkSection} disabled={saving} style={saving ? { opacity: 0.6 } : undefined}>{saving ? 'Saving…' : 'Save'}</button></>}>
         <div className="form-group">
           <label className="form-label">Assign to Section</label>
           <select className="form-select" value={linkSectionId} onChange={e => setLinkSectionId(e.target.value)}>
             <option value="">— Remove section link —</option>
             {sections.map((s: any) => <option key={s.id} value={s.id}>{s.name} (Sem {s.semester})</option>)}
           </select>
-          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
+          <p style={{ fontSize: '0.8rem', color: 'rgba(26,16,16,.5)', marginTop: '0.5rem' }}>
             The student's timetable will auto-load for their linked section after next login.
           </p>
         </div>

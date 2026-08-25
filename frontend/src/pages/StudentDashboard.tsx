@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { CalendarDays, Layers, FileDown, Sheet } from 'lucide-react';
 import { api } from '../api';
 import TimetableGrid from '../components/TimetableGrid';
+import PageHeader from '../components/PageHeader';
+import StatusPill from '../components/StatusPill';
 import { useToast } from '../components/Toast';
 import { exportTimetablePdf } from '../utils/exportPdf';
 import { exportTimetableExcel } from '../utils/exportExcel';
@@ -63,18 +65,17 @@ const StudentDashboard: React.FC = () => {
 
   return (
     <div>
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">My Timetable</h1>
-          <p className="page-subtitle">Your section's weekly schedule</p>
-        </div>
-        {selectedSection && filteredEntries.length > 0 && (
+      <PageHeader
+        eyebrow="STUDENT"
+        title="My Timetable"
+        description="Your section's weekly schedule."
+        action={selectedSection && filteredEntries.length > 0 ? (
           <div className="flex gap-2">
             <button className="btn btn-outline btn-sm" onClick={handleExportExcel}><Sheet size={14} /> Excel</button>
-            <button className="btn btn-outline btn-sm" onClick={handleExportPdf} disabled={exportingPdf}><FileDown size={14} /> {exportingPdf ? 'Exporting...' : 'PDF'}</button>
+            <button className="btn btn-outline btn-sm" onClick={handleExportPdf} disabled={exportingPdf}><FileDown size={14} /> {exportingPdf ? 'Exporting…' : 'PDF'}</button>
           </div>
-        )}
-      </div>
+        ) : undefined}
+      />
 
       {loading ? (
         <div className="empty-state card p-8"><p>Loading...</p></div>
@@ -103,9 +104,9 @@ const StudentDashboard: React.FC = () => {
               </select>
               {selectedSection && (
                 <>
-                  <span className="badge badge-active">{sectionName}</span>
+                  <StatusPill tone="neutral">{sectionName}</StatusPill>
                   {linkedSectionId === selectedSection && (
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>← your linked section</span>
+                    <span style={{ fontSize: '0.75rem', color: 'rgba(26,16,16,.5)' }}>← your linked section</span>
                   )}
                 </>
               )}
@@ -122,7 +123,7 @@ const StudentDashboard: React.FC = () => {
             <div className="card p-4" id="student-timetable-grid">
               <div className="flex items-center justify-between mb-4">
                 <h2 style={{ fontSize: '1rem', fontWeight: 600 }}>{publishedVersion.label || 'Published Timetable'}</h2>
-                <span className="badge badge-published">Published</span>
+                <StatusPill tone="crimson">PUBLISHED</StatusPill>
               </div>
               <TimetableGrid entries={entries} filterSectionId={selectedSection} />
             </div>

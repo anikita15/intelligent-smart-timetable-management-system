@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Clock, CalendarDays, FileDown, Sheet, Settings2, CheckCircle2 } from 'lucide-react';
 import { api } from '../api';
 import TimetableGrid from '../components/TimetableGrid';
+import PageHeader from '../components/PageHeader';
+import StatusPill from '../components/StatusPill';
 import { useToast } from '../components/Toast';
 import { exportTimetablePdf } from '../utils/exportPdf';
 import { exportTimetableExcel } from '../utils/exportExcel';
@@ -126,18 +128,17 @@ const FacultyDashboard: React.FC = () => {
 
   return (
     <div>
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Faculty Portal</h1>
-          <p className="page-subtitle">Your schedule and availability preferences</p>
-        </div>
-        {tab === 'schedule' && myFaculty && entries.length > 0 && (
+      <PageHeader
+        eyebrow="FACULTY"
+        title="Faculty Portal"
+        description="Your schedule and availability preferences."
+        action={tab === 'schedule' && myFaculty && entries.length > 0 ? (
           <div className="flex gap-2">
             <button className="btn btn-outline btn-sm" onClick={handleExportExcel}><Sheet size={14} /> Excel</button>
-            <button className="btn btn-outline btn-sm" onClick={handleExportPdf} disabled={exportingPdf}><FileDown size={14} /> {exportingPdf ? 'Exporting...' : 'PDF'}</button>
+            <button className="btn btn-outline btn-sm" onClick={handleExportPdf} disabled={exportingPdf}><FileDown size={14} /> {exportingPdf ? 'Exporting…' : 'PDF'}</button>
           </div>
-        )}
-      </div>
+        ) : undefined}
+      />
 
       {/* Tabs */}
       <div className="flex gap-0 mb-4" style={{ borderBottom: '2px solid var(--border)' }}>
@@ -196,7 +197,7 @@ const FacultyDashboard: React.FC = () => {
             <div className="card p-4" id="faculty-timetable-grid">
               <div className="flex items-center justify-between mb-4">
                 <h2 style={{ fontSize: '1rem', fontWeight: 600 }}>{publishedVersion.label || 'Published Timetable'}</h2>
-                <span className="badge badge-published">Published</span>
+                <StatusPill tone="crimson">PUBLISHED</StatusPill>
               </div>
               <TimetableGrid entries={entries} filterFacultyId={myFaculty?.id} showSection />
             </div>

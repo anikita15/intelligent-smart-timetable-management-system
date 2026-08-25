@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
-import { CheckCircle, XCircle, AlertCircle, Info, X } from 'lucide-react';
+import { X } from 'lucide-react';
 
 type ToastType = 'success' | 'error' | 'warning' | 'info';
 interface ToastMsg { id: number; type: ToastType; message: string; }
@@ -7,13 +7,6 @@ interface ToastMsg { id: number; type: ToastType; message: string; }
 const ToastCtx = createContext<{ toast: (type: ToastType, message: string) => void }>({ toast: () => {} });
 
 export const useToast = () => useContext(ToastCtx);
-
-const icons = {
-  success: <CheckCircle size={16} />,
-  error: <XCircle size={16} />,
-  warning: <AlertCircle size={16} />,
-  info: <Info size={16} />,
-};
 
 export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [toasts, setToasts] = useState<ToastMsg[]>([]);
@@ -30,7 +23,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       <div className="toast-container">
         {toasts.map(t => (
           <div key={t.id} className={`toast toast-${t.type}`}>
-            {icons[t.type]}
+            <span className="toast-dot" />
             <span style={{ flex: 1 }}>{t.message}</span>
             <button className="btn-ghost btn-icon" onClick={() => setToasts(p => p.filter(x => x.id !== t.id))}>
               <X size={14} />
