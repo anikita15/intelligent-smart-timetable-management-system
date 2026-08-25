@@ -1,4 +1,4 @@
-const BASE = 'http://localhost:5005/api';
+const BASE = (import.meta.env.VITE_API_BASE ?? 'http://localhost:5005') + '/api';
 
 function getHeaders() {
   const token = localStorage.getItem('token');
