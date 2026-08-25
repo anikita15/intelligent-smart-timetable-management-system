@@ -24,6 +24,8 @@ app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (curl, Postman, Railway health checks)
     if (!origin) return callback(null, true);
+    if (origin === 'http://localhost:5173') return callback(null, true);
+    if (origin.endsWith('.vercel.app')) return callback(null, true);
     if (allowedOrigins.includes(origin)) return callback(null, true);
     callback(new Error(`CORS: origin ${origin} not allowed`));
   },
