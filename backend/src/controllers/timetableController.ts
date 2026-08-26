@@ -323,7 +323,7 @@ export const getConflicts = async (req: Request, res: Response): Promise<any> =>
 
 export const checkSlot = async (req: Request, res: Response): Promise<any> => {
   try {
-    const { versionId } = req.params;
+    const versionId = req.params.versionId as string;
     const { facultyId, roomId, sectionId, timeSlotId, ignoreEntryId } = req.body;
 
     const version = await prisma.timetableVersion.findUnique({ where: { id: versionId } });
@@ -353,7 +353,7 @@ export const checkSlot = async (req: Request, res: Response): Promise<any> => {
       },
     });
 
-    const conflicts = overlapping.map(entry => {
+    const conflicts = overlapping.map((entry: any) => {
       if (entry.facultyId === facultyId) return `Faculty ${entry.faculty.name} is already teaching section ${entry.section.name} in this slot.`;
       if (entry.roomId === roomId) return `Room ${entry.room.name} is already occupied by section ${entry.section.name}.`;
       if (entry.sectionId === sectionId) return `Section ${entry.section.name} already has a class in this slot.`;
@@ -372,7 +372,8 @@ export const checkSlot = async (req: Request, res: Response): Promise<any> => {
 
 export const updateEntry = async (req: Request, res: Response): Promise<any> => {
   try {
-    const { versionId, entryId } = req.params;
+    const versionId = req.params.versionId as string;
+    const entryId = req.params.entryId as string;
     const { facultyId, roomId, timeSlotId, force } = req.body;
 
     const version = await prisma.timetableVersion.findUnique({ where: { id: versionId } });
