@@ -17,6 +17,7 @@ const app = express();
 
 const allowedOrigins = [
   'http://localhost:5173',
+  'https://frontend-anikita-anands-projects.vercel.app',
   ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []),
 ];
 
@@ -24,9 +25,14 @@ app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (curl, Postman, Railway health checks)
     if (!origin) return callback(null, true);
-    if (origin === 'http://localhost:5173') return callback(null, true);
-    if (origin.endsWith('.vercel.app')) return callback(null, true);
+    
     if (allowedOrigins.includes(origin)) return callback(null, true);
+    
+    // Optional: If you use Vercel preview deployments, you can securely allow them using a regex:
+    if (/^https:\/\/frontend-anikita-anands-projects(-[a-zA-Z0-9]+)?\.vercel\.app$/.test(origin)) {
+      return callback(null, true);
+    }
+
     callback(new Error(`CORS: origin ${origin} not allowed`));
   },
   credentials: true,
